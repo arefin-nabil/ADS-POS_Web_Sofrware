@@ -140,7 +140,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                         <th>Customer</th>
                         <th>Beetech ID</th>
                         <th>Items</th>
-                        <th>Beetech Balance<th>
+                        <th>Discount</th>
                         <th>Total</th>
                         <th>Cashier</th>
                         <th>Actions</th>
