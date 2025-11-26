@@ -47,13 +47,14 @@ $lowStockProducts = $conn->query("SELECT * FROM products WHERE stock < 20 ORDER 
                         <h6 class="card-title mb-0">Today's Sales</h6>
                         <h2 class="mt-2 mb-0">৳<?php echo number_format($todaySales, 2); ?></h2>
                     </div>
-                    <div class="fs-1">
-                        <i class="bi bi-currency-rupee"></i>
+                    <div class="fs-1 fw-bold">
+                        ৳
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
 
     <div class="col-md-3">
         <div class="card bg-success text-white">

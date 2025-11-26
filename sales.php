@@ -8,18 +8,22 @@ if (isset($_GET['export'])) {
     header('Content-Disposition: attachment; filename="sales_' . date('Y-m-d') . '.csv"');
 
     $output = fopen('php://output', 'w');
-    fputcsv($output, array('Invoice', 'Date', 'Customer', 'Subtotal', 'Discount', 'Total', 'Cashier'));
+    fputcsv($output, array('Invoice', 'Date', 'Customer', 'Beetech ID', 'Subtotal', 'Discount', 'Total', 'Cashier'));
 
-    $result = $conn->query("SELECT s.*, c.name as customer_name, u.fullname as cashier 
-                            FROM sales s 
-                            JOIN customers c ON s.customer_id = c.id 
-                            JOIN users u ON s.created_by = u.id 
-                            ORDER BY s.created_at DESC");
+    $result = $conn->query("
+        SELECT s.*, c.name AS customer_name, c.beetech_id AS customer_beetech, u.fullname AS cashier
+        FROM sales s
+        JOIN customers c ON s.customer_id = c.id
+        JOIN users u ON s.created_by = u.id
+        ORDER BY s.created_at DESC
+    ");
+
     while ($row = $result->fetch_assoc()) {
         fputcsv($output, array(
             str_pad($row['id'], 5, '0', STR_PAD_LEFT),
             date('Y-m-d H:i:s', strtotime($row['created_at'])),
             $row['customer_name'],
+            $row['customer_beetech'],
             $row['subtotal'],
             $row['discount'],
             $row['total'],
@@ -37,36 +41,54 @@ $offset = ($page - 1) * $limit;
 
 // Filters
 $where = "1=1";
-if (isset($_GET['date']) && $_GET['date']) {
+
+if (!empty($_GET['date'])) {
     $date = clean($_GET['date']);
     $where .= " AND DATE(s.created_at) = '$date'";
 }
-if (isset($_GET['customer']) && $_GET['customer']) {
+
+if (!empty($_GET['customer'])) {
     $customer = intval($_GET['customer']);
     $where .= " AND s.customer_id = $customer";
 }
 
-// Get total count
-$total = $conn->query("SELECT COUNT(*) as count FROM sales s WHERE $where")->fetch_assoc()['count'];
+if (!empty($_GET['beetech_id'])) {
+    $beetech_id = clean($_GET['beetech_id']);
+    $where .= " AND c.beetech_id = '$beetech_id'";
+}
+
+// Total count
+$total = $conn->query("
+    SELECT COUNT(*) AS count 
+    FROM sales s 
+    JOIN customers c ON s.customer_id = c.id
+    WHERE $where
+")->fetch_assoc()['count'];
 $totalPages = ceil($total / $limit);
 
-// Get sales
-$sales = $conn->query("SELECT s.*, c.name as customer_name, u.fullname as cashier 
-                       FROM sales s 
-                       JOIN customers c ON s.customer_id = c.id 
-                       JOIN users u ON s.created_by = u.id 
-                       WHERE $where
-                       ORDER BY s.created_at DESC 
-                       LIMIT $limit OFFSET $offset");
+// Sales list
+$sales = $conn->query("
+    SELECT s.*, c.name AS customer_name, c.beetech_id AS customer_beetech, u.fullname AS cashier
+    FROM sales s
+    JOIN customers c ON s.customer_id = c.id
+    JOIN users u ON s.created_by = u.id
+    WHERE $where
+    ORDER BY s.created_at DESC
+    LIMIT $limit OFFSET $offset
+");
 
-// Get customers for filter
+// Customers for filter dropdown
 $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 ?>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="bi bi-receipt"></i> Sales History</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="?export=1<?php echo isset($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo isset($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?>" class="btn btn-success">
+    <div class="btn-toolbar">
+        <a href="?export=1
+            <?php echo !empty($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?>
+            <?php echo !empty($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?>
+            <?php echo !empty($_GET['beetech_id']) ? '&beetech_id=' . $_GET['beetech_id'] : ''; ?>"
+            class="btn btn-success">
             <i class="bi bi-download"></i> Export CSV
         </a>
     </div>
@@ -91,7 +113,11 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                     <?php endwhile; ?>
                 </select>
             </div>
-            <div class="col-md-4 d-flex align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Beetech ID</label>
+                <input type="text" class="form-control" name="beetech_id" value="<?php echo $_GET['beetech_id'] ?? ''; ?>">
+            </div>
+            <div class="col-md-12 d-flex justify-content-end">
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="bi bi-funnel"></i> Filter
                 </button>
@@ -110,11 +136,11 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                 <thead>
                     <tr>
                         <th>Invoice #</th>
-                        <th>Date & Time</th>
+                        <th>Date</th>
                         <th>Customer</th>
+                        <th>Beetech ID</th>
                         <th>Items</th>
-                        <th>Subtotal</th>
-                        <th>Discount</th>
+                        <th>Beetech Balance<th>
                         <th>Total</th>
                         <th>Cashier</th>
                         <th>Actions</th>
@@ -122,16 +148,16 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                 </thead>
                 <tbody>
                     <?php while ($sale = $sales->fetch_assoc()):
-                        $itemCount = $conn->query("SELECT COUNT(*) as count FROM sale_items WHERE sale_id = {$sale['id']}")->fetch_assoc()['count'];
+                        $itemCount = $conn->query("SELECT COUNT(*) AS count FROM sale_items WHERE sale_id = {$sale['id']}")->fetch_assoc()['count'];
                     ?>
                         <tr>
                             <td><strong>#<?php echo str_pad($sale['id'], 5, '0', STR_PAD_LEFT); ?></strong></td>
                             <td><?php echo date('M d, Y h:i A', strtotime($sale['created_at'])); ?></td>
                             <td><?php echo $sale['customer_name']; ?></td>
+                            <td><?php echo $sale['customer_beetech']; ?></td>
                             <td><?php echo $itemCount; ?> items</td>
-                            <td>৳<?php echo number_format($sale['subtotal'], 2); ?></td>
                             <td class="text-success">৳<?php echo number_format($sale['discount'], 2); ?></td>
-                            <td><strong>৳<?php echo number_format($sale['total'], 2); ?></strong></td>
+                            <td><strong>৳<?php echo number_format($sale['subtotal'], 2); ?></strong></td>
                             <td><?php echo $sale['cashier']; ?></td>
                             <td>
                                 <button class="btn btn-sm btn-info" onclick="viewDetails(<?php echo $sale['id']; ?>)">
@@ -152,15 +178,15 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
             <nav>
                 <ul class="pagination justify-content-center">
                     <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="?page=<?php echo $page - 1; ?><?php echo isset($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo isset($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?>">Previous</a>
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?><?php echo !empty($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo !empty($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?><?php echo !empty($_GET['beetech_id']) ? '&beetech_id=' . $_GET['beetech_id'] : ''; ?>">Previous</a>
                     </li>
                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                         <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $i; ?><?php echo isset($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo isset($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?>"><?php echo $i; ?></a>
+                            <a class="page-link" href="?page=<?php echo $i; ?><?php echo !empty($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo !empty($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?><?php echo !empty($_GET['beetech_id']) ? '&beetech_id=' . $_GET['beetech_id'] : ''; ?>"><?php echo $i; ?></a>
                         </li>
                     <?php endfor; ?>
                     <li class="page-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="?page=<?php echo $page + 1; ?><?php echo isset($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo isset($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?>">Next</a>
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?><?php echo !empty($_GET['date']) ? '&date=' . $_GET['date'] : ''; ?><?php echo !empty($_GET['customer']) ? '&customer=' . $_GET['customer'] : ''; ?><?php echo !empty($_GET['beetech_id']) ? '&beetech_id=' . $_GET['beetech_id'] : ''; ?>">Next</a>
                     </li>
                 </ul>
             </nav>
@@ -178,7 +204,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
             </div>
             <div class="modal-body" id="saleDetailsContent">
                 <div class="text-center">
-                    <div class="spinner-border" role="status"></div>
+                    <div class="spinner-border"></div>
                 </div>
             </div>
         </div>
@@ -190,7 +216,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         const modal = new bootstrap.Modal(document.getElementById('saleDetailsModal'));
         modal.show();
 
-        fetch('get_sale_details.php?id=' + saleId)
+        fetch('sale_details.php?id=' + saleId)
             .then(response => response.text())
             .then(html => {
                 document.getElementById('saleDetailsContent').innerHTML = html;

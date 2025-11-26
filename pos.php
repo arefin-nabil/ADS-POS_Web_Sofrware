@@ -188,18 +188,18 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         </div>
 
         <div class="cart-summary">
-            <div class="d-flex justify-content-between mb-2">
+            <!-- <div class="d-flex justify-content-between mb-2">
                 <span>Subtotal:</span>
                 <strong id="subtotal">৳0.00</strong>
-            </div>
+            </div> -->
             <div class="d-flex justify-content-between mb-2 text-success">
-                <span>Discount (5%):</span>
-                <strong id="discount">৳0.00</strong>
+                <span>Beetech Poitn Earned:</span>
+                <strong id="discount">00</strong>
             </div>
             <hr>
             <div class="d-flex justify-content-between mb-3">
-                <h5>Total:</h5>
-                <h5 id="total">৳0.00</h5>
+                <h5>Total Payable:</h5>
+                <h5 id="subtotal">৳0.00</h5>
             </div>
 
             <button class="btn btn-primary btn-lg w-100" onclick="completeSale()">
@@ -307,7 +307,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
             </div>
         `;
             document.getElementById('subtotal').textContent = '৳0.00';
-            document.getElementById('discount').textContent = '৳0.00';
+            document.getElementById('discount').textContent = '';
             document.getElementById('total').textContent = '৳0.00';
             return;
         }
@@ -342,11 +342,11 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 
         cartItemsDiv.innerHTML = html;
 
-        const discount = subtotal * 0.05;
+        const discount = (subtotal * 0.05) / 6;
         const total = subtotal - discount;
 
         document.getElementById('subtotal').textContent = '৳' + subtotal.toFixed(2);
-        document.getElementById('discount').textContent = '৳' + discount.toFixed(2);
+        document.getElementById('discount').textContent = '' + discount.toFixed(2);
         document.getElementById('total').textContent = '৳' + total.toFixed(2);
     }
 

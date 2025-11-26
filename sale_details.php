@@ -3,17 +3,28 @@ require_once 'config.php';
 
 $sale_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Get sale details
-$sale = $conn->query("SELECT s.*, c.name as customer_name, c.mobile, c.beetech_id, u.fullname as cashier
-                      FROM sales s 
-                      JOIN customers c ON s.customer_id = c.id 
-                      JOIN users u ON s.created_by = u.id 
-                      WHERE s.id = $sale_id")->fetch_assoc();
+// Get sale details with customer info
+$sale = $conn->query("
+    SELECT s.*, 
+           c.name AS customer_name, 
+           c.mobile, 
+           c.beetech_id AS customer_beetech, 
+           u.fullname AS cashier
+    FROM sales s 
+    JOIN customers c ON s.customer_id = c.id 
+    JOIN users u ON s.created_by = u.id 
+    WHERE s.id = $sale_id
+")->fetch_assoc();
 
 if (!$sale) {
     echo '<div class="alert alert-danger">Sale not found</div>';
     exit;
 }
+
+// Safe fallbacks
+$customerName = $sale['customer_name'] ?? 'Unknown';
+$mobile       = $sale['mobile'] ?? 'N/A';
+$beetechID    = $sale['customer_beetech'] ?? 'N/A';
 
 // Get sale items
 $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
@@ -33,24 +44,25 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
             </tr>
             <tr>
                 <td><strong>Cashier:</strong></td>
-                <td><?php echo $sale['cashier']; ?></td>
+                <td><?php echo $sale['cashier'] ?? 'N/A'; ?></td>
             </tr>
         </table>
     </div>
+
     <div class="col-md-6">
         <h6>Customer Information</h6>
         <table class="table table-sm">
             <tr>
                 <td><strong>Name:</strong></td>
-                <td><?php echo $sale['customer_name']; ?></td>
+                <td><?php echo $customerName; ?></td>
             </tr>
             <tr>
                 <td><strong>Mobile:</strong></td>
-                <td><?php echo $sale['mobile']; ?></td>
+                <td><?php echo $mobile; ?></td>
             </tr>
             <tr>
                 <td><strong>Beetech ID:</strong></td>
-                <td><span class="badge bg-info"><?php echo $sale['beetech_id']; ?></span></td>
+                <td><span class="badge bg-info"><?php echo $beetechID; ?></span></td>
             </tr>
         </table>
     </div>
@@ -69,10 +81,10 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
     <tbody>
         <?php while ($item = $items->fetch_assoc()): ?>
             <tr>
-                <td><?php echo $item['product_name']; ?></td>
-                <td>৳<?php echo number_format($item['price'], 2); ?></td>
-                <td><?php echo $item['quantity']; ?></td>
-                <td>৳<?php echo number_format($item['total'], 2); ?></td>
+                <td><?php echo $item['product_name'] ?? 'Unknown'; ?></td>
+                <td>৳<?php echo number_format($item['price'] ?? 0, 2); ?></td>
+                <td><?php echo $item['quantity'] ?? 0; ?></td>
+                <td>৳<?php echo number_format($item['total'] ?? 0, 2); ?></td>
             </tr>
         <?php endwhile; ?>
     </tbody>
@@ -81,17 +93,13 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
 <div class="row mt-3">
     <div class="col-md-6 offset-md-6">
         <table class="table table-sm">
-            <tr>
-                <td><strong>Subtotal:</strong></td>
-                <td class="text-end">৳<?php echo number_format($sale['subtotal'], 2); ?></td>
-            </tr>
             <tr class="text-success">
-                <td><strong>Discount (5%):</strong></td>
-                <td class="text-end">- ৳<?php echo number_format($sale['discount'], 2); ?></td>
+                <td><strong>Beetech Balance: (5%)</strong></td>
+                <td class="text-end">৳<?php echo number_format($sale['discount'] ?? 0, 2); ?></td>
             </tr>
             <tr class="table-primary">
-                <td><strong>Grand Total:</strong></td>
-                <td class="text-end"><strong>৳<?php echo number_format($sale['total'], 2); ?></strong></td>
+                <td><strong>Total Amount:</strong></td>
+                <td class="text-end"><strong>৳<?php echo number_format($sale['subtotal'] ?? 0, 2); ?></strong></td>
             </tr>
         </table>
     </div>

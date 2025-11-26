@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Start output buffering and session immediately
 ob_start();
 if (session_status() === PHP_SESSION_NONE) {
@@ -7,9 +11,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Database Configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'pos_system');
+define('DB_USER', 'binaryba_wsrtbd_admin');
+define('DB_PASS', '@refin256wsrtbd');
+define('DB_NAME', 'binaryba_pos_system');
 
 // Create database connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
