@@ -161,7 +161,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
                 <i class="bi bi-list fs-4"></i>
             </button>
             <a class="navbar-brand" href="dashboard.php">
-                <i class="bi bi-shop-window"></i> POS System
+                <i class="bi bi-shop-window"></i> Al Madina Discount Shop
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>

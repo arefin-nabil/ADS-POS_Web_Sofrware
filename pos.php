@@ -66,30 +66,35 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 ?>
 
 <style>
+    /* --- DESKTOP LAYOUT --- */
     .pos-container {
         display: grid;
         grid-template-columns: 1fr 400px;
         gap: 20px;
         height: calc(100vh - 150px);
+        /* Fixed height for desktop */
     }
 
     .products-panel {
         overflow-y: auto;
+        padding-right: 5px;
     }
 
     .cart-panel {
-        background: var(--bs-body-bg);
+        background: var(--bs-card-bg, var(--bs-body-bg));
         border: 1px solid var(--bs-border-color);
         border-radius: 10px;
         padding: 20px;
         display: flex;
         flex-direction: column;
+        height: 100%;
     }
 
     .cart-items {
         flex: 1;
         overflow-y: auto;
         margin: 15px 0;
+        min-height: 100px;
     }
 
     .cart-item {
@@ -100,12 +105,15 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         margin-bottom: 10px;
         border: 1px solid var(--bs-border-color);
         border-radius: 5px;
+        background-color: rgba(0, 0, 0, 0.02);
     }
 
     .product-card {
         cursor: pointer;
         transition: all 0.3s;
         height: 100%;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-card-bg);
     }
 
     .product-card:hover {
@@ -118,6 +126,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         padding: 15px;
     }
 
+    /* Customer Search Dropdown */
     .customer-search-dropdown {
         position: absolute;
         z-index: 1000;
@@ -127,7 +136,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         background: var(--bs-body-bg);
         border: 1px solid var(--bs-border-color);
         border-radius: 5px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         display: none;
     }
 
@@ -139,6 +148,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         padding: 10px 15px;
         cursor: pointer;
         border-bottom: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
     }
 
     .customer-search-item:hover {
@@ -149,9 +159,50 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         border-bottom: none;
     }
 
+    /* --- MOBILE RESPONSIVE UPDATES --- */
     @media (max-width: 991.98px) {
         .pos-container {
-            grid-template-columns: 1fr !important;
+            display: flex;
+            flex-direction: column;
+            height: auto !important;
+            /* Allow full page scrolling */
+            gap: 20px;
+            padding-bottom: 30px;
+        }
+
+        .products-panel {
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            border-bottom: 1px solid var(--bs-border-color);
+            padding-bottom: 20px;
+        }
+
+        .cart-panel {
+            height: auto !important;
+            width: 100%;
+            border-top: 5px solid var(--bs-primary);
+        }
+
+        .cart-items {
+            flex: none !important;
+            height: auto !important;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px dashed var(--bs-border-color);
+            padding: 5px;
+        }
+
+        .h2 {
+            font-size: 1.5rem;
+        }
+
+        .product-card .card-body {
+            padding: 10px;
+        }
+
+        .display-4 {
+            font-size: 2rem;
         }
     }
 </style>
@@ -168,26 +219,28 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 <?php endif; ?>
 
 <div class="pos-container">
-    <!-- Products Panel -->
     <div class="products-panel">
         <div class="mb-3">
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                 <input type="text" class="form-control barcode-input" id="barcodeInput"
                     placeholder="Scan barcode or search product..." autofocus>
+                <button class="btn btn-outline-secondary" type="button" onclick="clearProductSearch()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         </div>
 
-        <div class="row g-3" id="productsGrid">
+        <div class="row g-2 g-md-3" id="productsGrid">
             <?php
             $products = $conn->query("SELECT * FROM products WHERE stock > 0 ORDER BY name");
             while ($product = $products->fetch_assoc()):
             ?>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <div class="card product-card" onclick='addToCart(<?php echo json_encode($product); ?>)'>
                         <div class="card-body text-center">
                             <i class="bi bi-box-seam display-4 text-primary"></i>
-                            <h6 class="mt-2"><?php echo $product['name']; ?></h6>
+                            <h6 class="mt-2 text-truncate"><?php echo $product['name']; ?></h6>
                             <p class="text-muted small mb-1"><?php echo $product['barcode']; ?></p>
                             <h5 class="text-success">৳<?php echo number_format($product['selling_price'], 2); ?></h5>
                             <small class="text-muted">Stock: <?php echo $product['stock']; ?></small>
@@ -198,7 +251,6 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         </div>
     </div>
 
-    <!-- Cart Panel -->
     <div class="cart-panel">
         <h4 class="mb-3"><i class="bi bi-cart-check"></i> Shopping Cart</h4>
 
@@ -208,6 +260,9 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="text" class="form-control" id="customerSearch"
                     placeholder="Type Beetech ID..." autocomplete="off">
+                <button class="btn btn-outline-secondary" type="button" onclick="clearCustomerSearch()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="customer-search-dropdown" id="customerDropdown"></div>
         </div>
@@ -237,10 +292,10 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
             </div>
         </div>
 
-        <div class="cart-summary">
+        <div class="cart-summary mt-auto">
             <div class="d-flex justify-content-between mb-2 text-success">
                 <span>Beetech Point Earned:</span>
-                <strong id="discount">00</strong>
+                <strong id="discount">0.00</strong>
             </div>
             <hr>
             <div class="d-flex justify-content-between mb-3">
@@ -284,6 +339,23 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                         echo json_encode($customersArray);
                         ?>;
 
+    // --- NEW: Clear Functions ---
+    function clearProductSearch() {
+        const input = document.getElementById('barcodeInput');
+        input.value = '';
+        input.focus();
+        // Trigger input event to reset the grid view
+        input.dispatchEvent(new Event('input'));
+    }
+
+    function clearCustomerSearch() {
+        const input = document.getElementById('customerSearch');
+        input.value = '';
+        input.focus();
+        document.getElementById('customerDropdown').classList.remove('show');
+    }
+    // ----------------------------
+
     // Customer search functionality
     document.getElementById('customerSearch').addEventListener('input', function(e) {
         const searchTerm = this.value.toLowerCase().trim();
@@ -321,8 +393,10 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
     document.addEventListener('click', function(e) {
         const dropdown = document.getElementById('customerDropdown');
         const searchInput = document.getElementById('customerSearch');
+        // Check if click is on clear button
+        const clearBtn = searchInput.nextElementSibling;
 
-        if (e.target !== searchInput && e.target !== dropdown) {
+        if (e.target !== searchInput && e.target !== dropdown && !dropdown.contains(e.target) && e.target !== clearBtn && !clearBtn.contains(e.target)) {
             dropdown.classList.remove('show');
         }
     });
@@ -358,7 +432,10 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 
         cards.forEach(card => {
             const text = card.textContent.toLowerCase();
-            card.closest('.col-md-3').style.display = text.includes(search) ? '' : 'none';
+            const colDiv = card.closest('[class*="col-"]');
+            if (colDiv) {
+                colDiv.style.display = text.includes(search) ? '' : 'none';
+            }
         });
     });
 
@@ -415,7 +492,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
             </div>
         `;
             document.getElementById('subtotal').textContent = '৳0.00';
-            document.getElementById('discount').textContent = '';
+            document.getElementById('discount').textContent = '0.00';
             return;
         }
 
@@ -449,6 +526,7 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 
         cartItemsDiv.innerHTML = html;
 
+        // Discount logic
         const discount = (subtotal * 0.05) / 6;
 
         document.getElementById('subtotal').textContent = '৳' + subtotal.toFixed(2);
