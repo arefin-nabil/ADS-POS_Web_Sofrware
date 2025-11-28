@@ -117,6 +117,43 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         font-size: 1.2rem;
         padding: 15px;
     }
+
+    .customer-search-dropdown {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+
+    .customer-search-dropdown.show {
+        display: block;
+    }
+
+    .customer-search-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    .customer-search-item:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+    }
+
+    .customer-search-item:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .pos-container {
+            grid-template-columns: 1fr !important;
+        }
+    }
 </style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -165,15 +202,28 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
     <div class="cart-panel">
         <h4 class="mb-3"><i class="bi bi-cart-check"></i> Shopping Cart</h4>
 
+        <div class="mb-3" style="position: relative;">
+            <label class="form-label">Search Customer by Beetech ID</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="customerSearch"
+                    placeholder="Type Beetech ID..." autocomplete="off">
+            </div>
+            <div class="customer-search-dropdown" id="customerDropdown"></div>
+        </div>
+
         <div class="mb-3">
-            <label class="form-label">Select Customer</label>
+            <label class="form-label">Selected Customer</label>
             <select class="form-select" id="customerId" required>
                 <option value="">-- Select Customer --</option>
                 <?php
                 $customers->data_seek(0);
                 while ($customer = $customers->fetch_assoc()):
                 ?>
-                    <option value="<?php echo $customer['id']; ?>">
+                    <option value="<?php echo $customer['id']; ?>"
+                        data-beetech="<?php echo $customer['beetech_id']; ?>"
+                        data-name="<?php echo $customer['name']; ?>"
+                        data-mobile="<?php echo $customer['mobile']; ?>">
                         <?php echo $customer['name']; ?> (<?php echo $customer['beetech_id']; ?>)
                     </option>
                 <?php endwhile; ?>
@@ -188,12 +238,8 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         </div>
 
         <div class="cart-summary">
-            <!-- <div class="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <strong id="subtotal">৳0.00</strong>
-            </div> -->
             <div class="d-flex justify-content-between mb-2 text-success">
-                <span>Beetech Poitn Earned:</span>
+                <span>Beetech Point Earned:</span>
                 <strong id="discount">00</strong>
             </div>
             <hr>
@@ -228,6 +274,68 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                         }
                         echo json_encode($productsArray);
                         ?>;
+
+    let allCustomers = <?php
+                        $customers->data_seek(0);
+                        $customersArray = [];
+                        while ($c = $customers->fetch_assoc()) {
+                            $customersArray[] = $c;
+                        }
+                        echo json_encode($customersArray);
+                        ?>;
+
+    // Customer search functionality
+    document.getElementById('customerSearch').addEventListener('input', function(e) {
+        const searchTerm = this.value.toLowerCase().trim();
+        const dropdown = document.getElementById('customerDropdown');
+
+        if (searchTerm === '') {
+            dropdown.classList.remove('show');
+            return;
+        }
+
+        const filtered = allCustomers.filter(customer =>
+            customer.beetech_id.toLowerCase().includes(searchTerm) ||
+            customer.name.toLowerCase().includes(searchTerm) ||
+            customer.mobile.includes(searchTerm)
+        );
+
+        if (filtered.length > 0) {
+            dropdown.innerHTML = filtered.map(customer => `
+                <div class="customer-search-item" onclick="selectCustomer(${customer.id})">
+                    <strong>${customer.name}</strong><br>
+                    <small class="text-muted">
+                        <i class="bi bi-credit-card"></i> ${customer.beetech_id} | 
+                        <i class="bi bi-phone"></i> ${customer.mobile}
+                    </small>
+                </div>
+            `).join('');
+            dropdown.classList.add('show');
+        } else {
+            dropdown.innerHTML = '<div class="customer-search-item text-muted">No customers found</div>';
+            dropdown.classList.add('show');
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('customerDropdown');
+        const searchInput = document.getElementById('customerSearch');
+
+        if (e.target !== searchInput && e.target !== dropdown) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    function selectCustomer(customerId) {
+        document.getElementById('customerId').value = customerId;
+        document.getElementById('customerDropdown').classList.remove('show');
+
+        const customer = allCustomers.find(c => c.id == customerId);
+        if (customer) {
+            document.getElementById('customerSearch').value = customer.beetech_id;
+        }
+    }
 
     // Barcode scanner support
     document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
@@ -308,7 +416,6 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         `;
             document.getElementById('subtotal').textContent = '৳0.00';
             document.getElementById('discount').textContent = '';
-            document.getElementById('total').textContent = '৳0.00';
             return;
         }
 
@@ -343,11 +450,9 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
         cartItemsDiv.innerHTML = html;
 
         const discount = (subtotal * 0.05) / 6;
-        const total = subtotal - discount;
 
         document.getElementById('subtotal').textContent = '৳' + subtotal.toFixed(2);
         document.getElementById('discount').textContent = '' + discount.toFixed(2);
-        document.getElementById('total').textContent = '৳' + total.toFixed(2);
     }
 
     function clearCart() {

@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mobile = clean($_POST['mobile']);
         $address = clean($_POST['address']);
         $beetech_id = clean($_POST['beetech_id']);
-        
+
         $stmt = $conn->prepare("INSERT INTO customers (name, mobile, address, beetech_id) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("ssss", $name, $mobile, $address, $beetech_id);
-        
+
         if ($stmt->execute()) {
             logActivity($conn, $_SESSION['user_id'], 'Added customer', $name);
             $message = 'Customer added successfully';
@@ -31,10 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mobile = clean($_POST['mobile']);
         $address = clean($_POST['address']);
         $beetech_id = clean($_POST['beetech_id']);
-        
+
         $stmt = $conn->prepare("UPDATE customers SET name=?, mobile=?, address=?, beetech_id=? WHERE id=?");
         $stmt->bind_param("ssssi", $name, $mobile, $address, $beetech_id, $id);
-        
+
         if ($stmt->execute()) {
             logActivity($conn, $_SESSION['user_id'], 'Updated customer', $name);
             $message = 'Customer updated successfully';
@@ -57,10 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="customers_' . date('Y-m-d') . '.csv"');
-    
+
     $output = fopen('php://output', 'w');
     fputcsv($output, array('ID', 'Name', 'Mobile', 'Address', 'Beetech ID', 'Joined Date'));
-    
+
     $result = $conn->query("SELECT * FROM customers");
     while ($row = $result->fetch_assoc()) {
         fputcsv($output, $row);
@@ -69,8 +69,15 @@ if (isset($_GET['export'])) {
     exit();
 }
 
+// Search functionality
+$search = isset($_GET['search']) ? clean($_GET['search']) : '';
+$searchCondition = '';
+if (!empty($search)) {
+    $searchCondition = "WHERE mobile LIKE '%$search%' OR name LIKE '%$search%' OR beetech_id LIKE '%$search%'";
+}
+
 // Get all customers
-$customers = $conn->query("SELECT * FROM customers ORDER BY name");
+$customers = $conn->query("SELECT * FROM customers $searchCondition ORDER BY name");
 ?>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -86,11 +93,42 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 </div>
 
 <?php if ($message): ?>
-<div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-    <?php echo $message; ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo $message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 <?php endif; ?>
+
+<!-- Search Box -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="search"
+                        placeholder="Search by Mobile Number, Name, or Beetech ID..."
+                        value="<?php echo htmlspecialchars($search); ?>" autofocus>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+            <?php if (!empty($search)): ?>
+                <div class="col-12">
+                    <a href="customers.php" class="btn btn-sm btn-secondary">
+                        <i class="bi bi-x-circle"></i> Clear Search
+                    </a>
+                    <span class="ms-2 text-muted">
+                        Found <?php echo $customers->num_rows; ?> result(s) for "<?php echo htmlspecialchars($search); ?>"
+                    </span>
+                </div>
+            <?php endif; ?>
+        </form>
+    </div>
+</div>
 
 <div class="card">
     <div class="card-body">
@@ -108,30 +146,45 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($customer = $customers->fetch_assoc()): ?>
-                    <tr>
-                        <td><?php echo $customer['id']; ?></td>
-                        <td><?php echo $customer['name']; ?></td>
-                        <td><?php echo $customer['mobile']; ?></td>
-                        <td><?php echo $customer['address']; ?></td>
-                        <td><span class="badge bg-info"><?php echo $customer['beetech_id']; ?></span></td>
-                        <td><?php echo date('M d, Y', strtotime($customer['created_at'])); ?></td>
-                        <td>
-                            <a href="customer_profile.php?id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-info">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <button class="btn btn-sm btn-warning" onclick="editCustomer(<?php echo htmlspecialchars(json_encode($customer)); ?>)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this customer?');">
-                                <input type="hidden" name="id" value="<?php echo $customer['id']; ?>">
-                                <button type="submit" name="delete_customer" class="btn btn-sm btn-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
+                    <?php if ($customers->num_rows > 0): ?>
+                        <?php while ($customer = $customers->fetch_assoc()): ?>
+                            <tr>
+                                <td><?php echo $customer['id']; ?></td>
+                                <td><?php echo $customer['name']; ?></td>
+                                <td>
+                                    <i class="bi bi-phone"></i> <?php echo $customer['mobile']; ?>
+                                </td>
+                                <td><?php echo $customer['address']; ?></td>
+                                <td><span class="badge bg-info"><?php echo $customer['beetech_id']; ?></span></td>
+                                <td><?php echo date('M d, Y', strtotime($customer['created_at'])); ?></td>
+                                <td>
+                                    <a href="customer_profile.php?id=<?php echo $customer['id']; ?>" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-warning" onclick="editCustomer(<?php echo htmlspecialchars(json_encode($customer)); ?>)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this customer?');">
+                                        <input type="hidden" name="id" value="<?php echo $customer['id']; ?>">
+                                        <button type="submit" name="delete_customer" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                                <?php if (!empty($search)): ?>
+                                    No customers found matching "<?php echo htmlspecialchars($search); ?>"
+                                <?php else: ?>
+                                    No customers found
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -212,14 +265,14 @@ $customers = $conn->query("SELECT * FROM customers ORDER BY name");
 </div>
 
 <script>
-function editCustomer(customer) {
-    document.getElementById('edit_id').value = customer.id;
-    document.getElementById('edit_name').value = customer.name;
-    document.getElementById('edit_mobile').value = customer.mobile;
-    document.getElementById('edit_address').value = customer.address;
-    document.getElementById('edit_beetech_id').value = customer.beetech_id;
-    new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
-}
+    function editCustomer(customer) {
+        document.getElementById('edit_id').value = customer.id;
+        document.getElementById('edit_name').value = customer.name;
+        document.getElementById('edit_mobile').value = customer.mobile;
+        document.getElementById('edit_address').value = customer.address;
+        document.getElementById('edit_beetech_id').value = customer.beetech_id;
+        new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
+    }
 </script>
 
 <?php require_once 'footer.php'; ?>
