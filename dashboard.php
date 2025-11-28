@@ -4,7 +4,7 @@ require_once 'header.php';
 
 // Get today's sales
 $today = date('Y-m-d');
-$todaySales = $conn->query("SELECT SUM(total) as total FROM sales WHERE DATE(created_at) = '$today'")->fetch_assoc()['total'] ?? 0;
+$todaySales = $conn->query("SELECT SUM(subtotal) as subtotal FROM sales WHERE DATE(created_at) = '$today'")->fetch_assoc()['subtotal'] ?? 0;
 
 // Get total customers
 $totalCustomers = $conn->query("SELECT COUNT(*) as count FROM customers")->fetch_assoc()['count'];
@@ -129,7 +129,7 @@ $lowStockProducts = $conn->query("SELECT * FROM products WHERE stock < 20 ORDER 
                                 <tr>
                                     <td>#<?php echo str_pad($sale['id'], 5, '0', STR_PAD_LEFT); ?></td>
                                     <td><?php echo $sale['customer_name']; ?></td>
-                                    <td>৳<?php echo number_format($sale['total'], 2); ?></td>
+                                    <td>৳<?php echo number_format($sale['subtotal'], 2); ?></td>
                                     <td><?php echo date('M d, Y h:i A', strtotime($sale['created_at'])); ?></td>
                                     <td>
                                         <a href="invoice.php?id=<?php echo $sale['id']; ?>" class="btn btn-sm btn-primary" target="_blank">

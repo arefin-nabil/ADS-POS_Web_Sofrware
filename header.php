@@ -10,6 +10,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="<?php echo $theme; ?>">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,6 +21,8 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         body {
             padding-top: 56px;
         }
+
+        /* Desktop Sidebar */
         .sidebar {
             position: fixed;
             top: 56px;
@@ -29,6 +32,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             padding: 48px 0 0;
             box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
         }
+
         .sidebar-sticky {
             position: relative;
             top: 0;
@@ -37,30 +41,125 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             overflow-x: hidden;
             overflow-y: auto;
         }
+
         .sidebar .nav-link {
             color: inherit;
             padding: 0.75rem 1rem;
         }
+
         .sidebar .nav-link.active {
             background-color: rgba(var(--bs-primary-rgb), 0.1);
             color: var(--bs-primary);
             border-left: 3px solid var(--bs-primary);
         }
+
         .sidebar .nav-link:hover {
             background-color: rgba(var(--bs-primary-rgb), 0.05);
         }
+
         main {
             margin-left: 240px;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: -100%;
+                width: 250px;
+                height: calc(100vh - 56px);
+                transition: left 0.3s ease-in-out;
+                z-index: 1040;
+                background: var(--bs-body-bg);
+                border-right: 1px solid var(--bs-border-color);
+                padding-top: 0;
+            }
+
+            .sidebar.show {
+                left: 0;
+            }
+
+            .sidebar-backdrop {
+                display: none;
+                position: fixed;
+                top: 56px;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1030;
+            }
+
+            .sidebar-backdrop.show {
+                display: block;
+            }
+
+            main {
+                margin-left: 0;
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+
+            .mobile-menu-btn {
+                display: inline-block !important;
+            }
+
+            /* Table responsiveness */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Card adjustments */
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            /* Form adjustments */
+            .btn-toolbar {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .btn-toolbar .btn {
+                width: 100%;
+            }
+        }
+
+        .mobile-menu-btn {
+            display: none;
+        }
+
         @media print {
-            .no-print { display: none !important; }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* POS Mobile Optimization */
+        @media (max-width: 991.98px) {
+            .pos-container {
+                grid-template-columns: 1fr !important;
+            }
+
+            .cart-panel {
+                position: sticky;
+                bottom: 0;
+                max-height: 50vh;
+                overflow-y: auto;
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top no-print">
         <div class="container-fluid">
+            <button class="btn btn-link text-white mobile-menu-btn me-2" onclick="toggleSidebar()" type="button">
+                <i class="bi bi-list fs-4"></i>
+            </button>
             <a class="navbar-brand" href="dashboard.php">
                 <i class="bi bi-shop-window"></i> POS System
             </a>
@@ -80,7 +179,9 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                         </ul>
                     </li>
@@ -89,10 +190,13 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         </div>
     </nav>
 
+    <!-- Sidebar Backdrop (Mobile) -->
+    <div class="sidebar-backdrop no-print" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
     <div class="container-fluid no-print">
         <div class="row">
-            <nav class="col-md-2 d-md-block bg-body-secondary sidebar">
+            <nav class="col-md-2 d-md-block bg-body-secondary sidebar" id="sidebar">
                 <div class="sidebar-sticky">
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -121,15 +225,16 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
                             </a>
                         </li>
                         <?php if (isAdmin()): ?>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'users.php' ? 'active' : ''; ?>" href="users.php">
-                                <i class="bi bi-person-gear"></i> Users
-                            </a>
-                        </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'users.php' ? 'active' : ''; ?>" href="users.php">
+                                    <i class="bi bi-person-gear"></i> Users
+                                </a>
+                            </li>
                         <?php endif; ?>
                     </ul>
                 </div>
             </nav>
 
             <main class="col-md-10 ms-sm-auto px-md-4 py-4">
-                <?php // Content will be inserted here ?>
+                <?php // Content will be inserted here 
+                ?>

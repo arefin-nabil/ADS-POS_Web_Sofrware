@@ -24,10 +24,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($result && $result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        // Verify password
-        if (md5($password) === $user['password']) {
+        // Verify password - support both md5 (old) and password_hash (new)
+        $passwordValid = false;
 
+        // Check if it's a bcrypt hash (new method)
+        if (password_verify($password, $user['password'])) {
+            $passwordValid = true;
+        }
+        // Check if it's md5 (old method - for backwards compatibility)
+        elseif (md5($password) === $user['password']) {
+            $passwordValid = true;
 
+            // Update to bcrypt for security
+            $newHash = password_hash($password, PASSWORD_DEFAULT);
+            $conn->query("UPDATE users SET password = '$newHash' WHERE id = {$user['id']}");
+        }
+
+        if ($passwordValid) {
             // Set session data
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
@@ -68,13 +81,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 15px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
+
+        @media (max-width: 576px) {
+            .login-card {
+                margin: 10px;
+            }
+
+            .login-card .card-body {
+                padding: 2rem 1.5rem !important;
+            }
+
+            .login-card h2 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-5">
+            <div class="col-md-5 col-lg-4">
                 <div class="card login-card">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">

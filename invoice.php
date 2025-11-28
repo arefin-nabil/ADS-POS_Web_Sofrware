@@ -25,6 +25,7 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice #<?php echo str_pad($sale_id, 5, '0', STR_PAD_LEFT); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         @media print {
             body {
@@ -121,6 +122,65 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
         .text-right {
             text-align: right;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 576px) {
+            body {
+                padding: 10px;
+                font-size: 11px;
+            }
+
+            .invoice-header h2 {
+                font-size: 18px;
+            }
+
+            .invoice-header p {
+                font-size: 10px;
+            }
+
+            .invoice-details table {
+                font-size: 10px;
+            }
+
+            .items-table {
+                font-size: 10px;
+            }
+
+            .items-table th,
+            .items-table td {
+                padding: 4px 2px;
+            }
+
+            .totals table {
+                font-size: 11px;
+            }
+
+            .totals .grand-total {
+                font-size: 14px;
+            }
+
+            .footer {
+                font-size: 9px;
+            }
+
+            .no-print .btn {
+                font-size: 12px;
+                padding: 8px 12px;
+                margin: 5px 2px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .no-print {
+                text-align: center;
+            }
+
+            .no-print .btn {
+                display: block;
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
     </style>
 </head>
 
@@ -187,10 +247,6 @@ $items = $conn->query("SELECT * FROM sale_items WHERE sale_id = $sale_id");
 
     <div class="totals">
         <table>
-            <!-- <tr>
-                <td>Subtotal:</td>
-                <td class="text-right">৳<?php echo number_format($sale['subtotal'], 2); ?></td>
-            </tr> -->
             <tr>
                 <td>Beetech point Earned:</td>
                 <td class="text-right" style="color: green;">৳<?php echo number_format($sale['discount'] / 6, 2); ?></td>
